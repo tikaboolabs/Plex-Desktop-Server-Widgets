@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import Combine
 
 @main
 struct PlexDesktopWidgetsApp: App {
@@ -22,7 +23,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem?
     private var widgetWindows: [String: NSWindow] = [:]
     private var settingsWindow: NSWindow?
+    private var settingsCloseObserver: NSObjectProtocol?
     private let dataManager = PlexDataManager.shared
+    private var nowPlayingHostView: NSHostingView<AnyView>?
+    private var resizeCancellable: AnyCancellable?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -146,7 +150,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
         settingsWindow = window
 
-        NotificationCenter.default.addObserver(
+        if let prev = settingsCloseObserver {
+            NotificationCenter.default.removeObserver(prev)
+        }
+        settingsCloseObserver = NotificationCenter.default.addObserver(
             forName: NSWindow.willCloseNotification, object: window, queue: .main
         ) { [weak self] _ in
             self?.settingsWindow = nil
@@ -214,6 +221,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hostView.layer?.backgroundColor = .clear
         hostView.layer?.isOpaque = false
 
+        // Store ref for auto-resize
+        if key == "nowPlaying" {
+            nowPlayingHostView = hostView
+        }
+
         let container = NSView(frame: NSRect(origin: .zero, size: size))
         container.wantsLayer = true
         container.layer?.backgroundColor = .clear
@@ -232,6 +244,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             hostView.layer?.backgroundColor = .clear
             container.layer?.backgroundColor = .clear
         }
+
+        // Auto-resize nowPlaying window when streams change
+        if key == "nowPlaying" {
+            resizeCancellable = dataManager.$streams
+                .debounce(for: .milliseconds(100), scheduler: RunLoop.main)
+                .sink { [weak self] _ in self?.resizeNowPlaying() }
+        }
+    }
+
+    // MARK: - Auto-Resize Now Playing
+    private func resizeNowPlaying() {
+        guard let window = widgetWindows["nowPlaying"],
+              let hostView = nowPlayingHostView else { return }
+
+        let fitting = hostView.fittingSize
+        let newHeight = max(fitting.height, 120)  // minimum height for empty state
+        let oldFrame = window.frame
+
+        // Grow/shrink from top edge (keep top-left pinned)
+        let newY = oldFrame.origin.y + oldFrame.height - newHeight
+        let newFrame = NSRect(x: oldFrame.origin.x, y: newY,
+                              width: oldFrame.width, height: newHeight)
+
+        window.setFrame(newFrame, display: true, animate: true)
     }
 }
 
@@ -251,7 +287,7 @@ final class WidgetWindow: NSPanel {
         backgroundColor = .clear
         hasShadow = true
         level = .init(rawValue: Int(CGWindowLevelForKey(.desktopWindow)) + 1)
-        collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
+        collectionBehavior = [.stationary, .ignoresCycle]
         isMovableByWindowBackground = true
         hidesOnDeactivate = false
         isFloatingPanel = true

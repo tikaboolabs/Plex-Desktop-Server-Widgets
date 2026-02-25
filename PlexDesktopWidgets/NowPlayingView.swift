@@ -43,13 +43,11 @@ struct NowPlayingView: View {
 
     // MARK: - Streams
     private var streamsList: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            LazyVStack(spacing: 0) {
-                ForEach(Array(data.streams.enumerated()), id: \.element.id) { index, stream in
-                    StreamRow(stream: stream)
-                    if index < data.streams.count - 1 {
-                        Divider().background(Color.wSeparator).padding(.horizontal, 16)
-                    }
+        VStack(spacing: 0) {
+            ForEach(Array(data.streams.enumerated()), id: \.element.id) { index, stream in
+                StreamRow(stream: stream)
+                if index < data.streams.count - 1 {
+                    Divider().background(Color.wSeparator).padding(.horizontal, 16)
                 }
             }
         }
@@ -212,11 +210,37 @@ struct StreamRow: View {
     }
 }
 
-// MARK: - Poster Image Loader (supports self-signed certs)
+// MARK: - Poster Image Cache + Loader
+private final class PosterCache {
+    static let shared = PosterCache()
+    private let cache = NSCache<NSString, NSImage>()
+    private let session: URLSession
+
+    private init() {
+        cache.countLimit = 32
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 6
+        session = URLSession(configuration: config, delegate: InsecureDelegate.shared, delegateQueue: nil)
+    }
+
+    func image(for url: String) async -> NSImage? {
+        let key = url as NSString
+        if let cached = cache.object(forKey: key) { return cached }
+        guard let requestUrl = URL(string: url) else { return nil }
+        do {
+            let (data, _) = try await session.data(from: requestUrl)
+            if let nsImage = NSImage(data: data) {
+                cache.setObject(nsImage, forKey: key)
+                return nsImage
+            }
+        } catch {}
+        return nil
+    }
+}
+
 struct PosterImage: View {
     let url: String
     @State private var image: NSImage?
-    @State private var isLoading = true
 
     var body: some View {
         Group {
@@ -229,42 +253,14 @@ struct PosterImage: View {
             }
         }
         .onAppear { loadImage() }
-        .onChange(of: url) { _ in loadImage() }
+        .onChange(of: url) { _, _ in loadImage() }
     }
 
     private func loadImage() {
-        guard let requestUrl = URL(string: url) else { return }
-        isLoading = true
-
-        let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 6
-        let session = URLSession(configuration: config, delegate: PosterSSLDelegate.shared, delegateQueue: nil)
-
         Task {
-            do {
-                let (data, _) = try await session.data(from: requestUrl)
-                if let nsImage = NSImage(data: data) {
-                    await MainActor.run {
-                        self.image = nsImage
-                        self.isLoading = false
-                    }
-                }
-            } catch {
-                await MainActor.run { self.isLoading = false }
+            if let loaded = await PosterCache.shared.image(for: url) {
+                await MainActor.run { self.image = loaded }
             }
-        }
-    }
-}
-
-private class PosterSSLDelegate: NSObject, URLSessionDelegate {
-    static let shared = PosterSSLDelegate()
-    func urlSession(_ session: URLSession, didReceive challenge: URLAuthenticationChallenge,
-                    completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
-        if challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust,
-           let trust = challenge.protectionSpace.serverTrust {
-            completionHandler(.useCredential, URLCredential(trust: trust))
-        } else {
-            completionHandler(.performDefaultHandling, nil)
         }
     }
 }

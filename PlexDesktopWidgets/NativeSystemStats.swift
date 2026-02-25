@@ -13,6 +13,8 @@ final class NativeSystemStats {
     private var prevNiceTicks: UInt64 = 0
     private var hasBaseline = false
 
+    private let hostPort = mach_host_self()
+
     /// Memory utilization as a percentage (0–100), matching Activity Monitor.
     func memoryUsage() -> Double {
         var stats = vm_statistics64()
@@ -20,7 +22,7 @@ final class NativeSystemStats {
 
         let result = withUnsafeMutablePointer(to: &stats) { ptr in
             ptr.withMemoryRebound(to: integer_t.self, capacity: Int(count)) { intPtr in
-                host_statistics64(mach_host_self(), HOST_VM_INFO64, intPtr, &count)
+                host_statistics64(hostPort, HOST_VM_INFO64, intPtr, &count)
             }
         }
 
@@ -44,7 +46,7 @@ final class NativeSystemStats {
         var cpuInfo: processor_info_array_t?
         var numCPUInfo: mach_msg_type_number_t = 0
 
-        let result = host_processor_info(mach_host_self(),
+        let result = host_processor_info(hostPort,
                                           PROCESSOR_CPU_LOAD_INFO,
                                           &numCPU,
                                           &cpuInfo,

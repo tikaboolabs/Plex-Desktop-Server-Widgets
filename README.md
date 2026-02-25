@@ -1,6 +1,6 @@
 # Plex Desktop Widgets for macOS
 
-Live desktop widgets for Plex Media Server — now playing, bandwidth, and system stats updating every 2 seconds.
+Live desktop widgets for Plex Media Server — now playing, bandwidth, and system stats updating every 5 seconds.
 
 ![macOS](https://img.shields.io/badge/macOS-14.0%2B-blue) ![Swift](https://img.shields.io/badge/Swift-5.9-orange) ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -24,7 +24,7 @@ Apple's WidgetKit framework has two dealbreakers for this use case:
 1. **Requires a $99/year Apple Developer account** to sign WidgetKit extensions. Not worth it for a personal tool.
 2. **Timeline-based refresh only** — Apple controls when your widget updates, with the fastest reliable refresh being every 5–15 minutes. Useless for monitoring active streams and real-time bandwidth.
 
-Instead, this app uses borderless transparent `NSPanel` windows pinned to the desktop layer, polling your Plex server every 2 seconds. Same visual result, no developer account needed, real-time data.
+Instead, this app uses borderless transparent `NSPanel` windows pinned to the desktop layer, polling your Plex server every 5 seconds. Same visual result, no developer account needed, real-time data.
 
 ## Requirements
 
@@ -35,52 +35,67 @@ Instead, this app uses borderless transparent `NSPanel` windows pinned to the de
 
 ## Build & Install
 
-### 1. Install XcodeGen
+### Prerequisites
 
-If you don't have it already:
+You need two things installed before building:
+
+1. **Xcode** — Free from the Mac App Store. This is Apple's development environment and includes the Swift compiler, macOS SDK, and everything needed to build native apps. After installing, open it once and accept the license agreement.
+
+2. **XcodeGen** — A small command-line tool that generates Xcode project files. Install it with [Homebrew](https://brew.sh):
 
 ```bash
 brew install xcodegen
 ```
 
-Don't have Homebrew? Install it first: https://brew.sh
+Don't have Homebrew? Install it first by pasting this into Terminal:
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
 
-### 2. Clone and Generate the Xcode Project
+### Option A: Quick Install (Terminal — recommended)
+
+This clones, builds, installs to `/Applications`, and launches the app in one step:
+
+```bash
+git clone https://github.com/tikaboolabs/Plex-Desktop-Server-Widgets.git
+cd Plex-Desktop-Server-Widgets
+chmod +x install.sh && ./install.sh
+```
+
+### Option B: Build from Terminal (without installing)
+
+If you want to build without installing to `/Applications`:
 
 ```bash
 git clone https://github.com/tikaboolabs/Plex-Desktop-Server-Widgets.git
 cd Plex-Desktop-Server-Widgets
 xcodegen generate
+xcodebuild -scheme PlexDesktopWidgets -configuration Release build
 ```
 
-This creates `PlexDesktopWidgets.xcodeproj` from the `project.yml` spec.
+The built app will be in `~/Library/Developer/Xcode/DerivedData/PlexDesktopWidgets-*/Build/Products/Release/Plex Desktop Widgets.app`. You can copy it anywhere you like.
 
-### 3. Open in Xcode
+### Option C: Build in Xcode (GUI)
 
+If you prefer using the Xcode GUI:
+
+1. Clone the repo and generate the project:
 ```bash
+git clone https://github.com/tikaboolabs/Plex-Desktop-Server-Widgets.git
+cd Plex-Desktop-Server-Widgets
+xcodegen generate
 open PlexDesktopWidgets.xcodeproj
 ```
 
-### 4. Set Build Configuration to Release
+2. In Xcode, set the build configuration to Release:
+   - Click **Product → Scheme → Edit Scheme…** (or press `⌘<`)
+   - Select **Run** on the left sidebar
+   - Change **Build Configuration** from `Debug` to **`Release`**
+   - Click **Close**
 
-In Xcode:
-1. Click **Product → Scheme → Edit Scheme…** (or press `⌘<`)
-2. Select **Run** on the left sidebar
-3. Change **Build Configuration** from `Debug` to **`Release`**
-4. Click **Close**
+3. Press **⌘B** to build (or **⌘R** to build and run immediately). If Xcode asks you to trust the project, click **Trust**.
 
-### 5. Build
-
-Press **⌘B** (or **⌘R** to build and run immediately).
-
-If Xcode asks you to trust the project or its plugins, click **Trust**.
-
-### 6. Get the Built App
-
-1. In Xcode, go to **Product → Show Build Folder in Finder**
-2. Navigate to **`Build/Products/Release/`**
-3. You'll see **`Plex Desktop Widgets.app`**
-4. **Drag it to your `/Applications` folder**
+4. To find the built app: go to **Product → Show Build Folder in Finder**, navigate to `Build/Products/Release/`, and drag **`Plex Desktop Widgets.app`** to your `/Applications` folder.
 
 ### 7. Launch & Configure
 
@@ -138,7 +153,7 @@ Click the ▶ icon in your menu bar to:
 
 - **Native Swift/AppKit** — no Electron, no web views, no external dependencies
 - **Borderless NSPanel windows** at desktop+1 level with transparent backgrounds
-- **Poster art** fetched from Plex's built-in photo transcoder (`/photo/:/transcode`)
+- **Poster art** fetched from Plex's built-in photo transcoder (`/photo/:/transcode`) with in-memory caching (up to 32 posters)
 - **CPU/RAM** via Mach kernel APIs (`host_statistics64`, `host_processor_info`) — matches Activity Monitor
 - **Bandwidth** derived in real time from active session data, not the delayed `/statistics/bandwidth` endpoint
 - **Self-signed cert support** for HTTPS connections to your server
@@ -175,7 +190,7 @@ Color(red: 0.07, green: 0.08, blue: 0.14).opacity(0.85)  // ← adjust this
 
 Lower = more translucent (try `0.70` for glassier, `0.95` for nearly opaque).
 
-**Change polling interval** — In `PlexDataManager.swift`, change `2.0` to your preferred interval in seconds.
+**Change polling interval** — In `PlexDataManager.swift`, change `5.0` to your preferred interval in seconds.
 
 ## Troubleshooting
 

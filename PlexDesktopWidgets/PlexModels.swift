@@ -36,14 +36,24 @@ struct PlexStream: Codable, Identifiable, Hashable {
 
 // MARK: - Bandwidth Entry
 struct BandwidthEntry: Codable, Identifiable {
-    let id = UUID()
+    private static var nextId: Int = 0
+    private static func makeId() -> Int { nextId += 1; return nextId }
+
+    let id: Int
     let timestamp: Date
     let lanMbps: Double
     let wanMbps: Double
     var totalMbps: Double { lanMbps + wanMbps }
 
+    init(timestamp: Date, lanMbps: Double, wanMbps: Double) {
+        self.id = Self.makeId()
+        self.timestamp = timestamp
+        self.lanMbps = lanMbps
+        self.wanMbps = wanMbps
+    }
+
     enum CodingKeys: String, CodingKey {
-        case timestamp, lanMbps, wanMbps
+        case id, timestamp, lanMbps, wanMbps
     }
 }
 

@@ -181,8 +181,8 @@ final class PlexAPIClient {
     }
 }
 
-// MARK: - Trust self-signed certs
-private class InsecureDelegate: NSObject, URLSessionDelegate {
+// MARK: - Trust self-signed certs (shared across PlexAPI and PosterImage)
+final class InsecureDelegate: NSObject, URLSessionDelegate {
     static let shared = InsecureDelegate()
     func urlSession(_ session: URLSession, didReceive challenge: URLAuthenticationChallenge,
                     completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {

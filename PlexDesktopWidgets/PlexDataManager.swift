@@ -25,7 +25,7 @@ final class PlexDataManager: ObservableObject {
     func startPolling() {
         _ = nativeStats.cpuUsage() // Prime CPU baseline
         fetch()
-        timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+        timer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.fetch() }
         }
     }
@@ -58,7 +58,7 @@ final class PlexDataManager: ObservableObject {
             )
             bandwidthHistory.append(entry)
             if bandwidthHistory.count > bandwidthHistorySize {
-                bandwidthHistory.removeFirst()
+                bandwidthHistory = Array(bandwidthHistory.suffix(bandwidthHistorySize))
             }
             self.bandwidth = bandwidthHistory
 
@@ -67,8 +67,8 @@ final class PlexDataManager: ObservableObject {
             let hostRam = nativeStats.memoryUsage()
             cpuHistory.append(hostCpu)
             ramHistory.append(hostRam)
-            if cpuHistory.count > historySize { cpuHistory.removeFirst() }
-            if ramHistory.count > historySize { ramHistory.removeFirst() }
+            if cpuHistory.count > historySize { cpuHistory = Array(cpuHistory.suffix(historySize)) }
+            if ramHistory.count > historySize { ramHistory = Array(ramHistory.suffix(historySize)) }
 
             let plexCpu = snapshot.resources?.plexCpu ?? 0
             let plexRam = snapshot.resources?.plexRam ?? 0
