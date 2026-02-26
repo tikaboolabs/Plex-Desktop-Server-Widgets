@@ -2,7 +2,7 @@
 
 Live desktop widgets for Plex Media Server — now playing, bandwidth, and system stats updating every 5 seconds.
 
-![macOS](https://img.shields.io/badge/macOS-14.0%2B-blue) ![Swift](https://img.shields.io/badge/Swift-5.9-orange) ![License](https://img.shields.io/badge/license-MIT-green)
+![macOS](https://img.shields.io/badge/macOS-14.0%2B-blue) ![Swift](https://img.shields.io/badge/Swift-5.9-orange) ![License](https://img.shields.io/badge/license-GPL--3.0-blue)
 
 <!-- Add your screenshot here -->
 <!-- ![Screenshot](screenshots/desktop.png) -->
@@ -215,4 +215,4 @@ This project was built in one evening through conversational AI-assisted develop
 
 ## License
 
-MIT License — do whatever you want with it.
+This project is licensed under the [GNU General Public License v3.0](LICENSE).
